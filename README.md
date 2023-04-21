@@ -6,7 +6,7 @@
 
 <div align="center">
 
-# `💩 webpurify-client`
+# `💩 tame-webpurify-client`
 
 **Super simple client for the Webpurify REST API**
 
@@ -25,9 +25,9 @@
 
 An incredibly small library to interact with the https://www.webpurify.com/documentation/ REST API.
 
-`webpurify-client` takes the [sans-io](https://sans-io.readthedocs.io/) approach and builds up the request objects for you so that you can use whatever library you're used to for the actual HTTP transport.
+`tame-webpurify-client` takes the [sans-io](https://sans-io.readthedocs.io/) approach and builds up the request objects for you so that you can use whatever library you're used to for the actual HTTP transport.
 
-See the example code on how to use it `webpurify-client` together with [reqwest](https://crates.io/crates/reqwest)
+See the example code on how to use it `tame-webpurify-client` together with [reqwest](https://crates.io/crates/reqwest)
 ## Examples
 
 Build and run the provided example:
@@ -58,7 +58,7 @@ $ cargo run --example profanity -- --apikey <your-webpurify-api-key>
 
 ## Supported methods
 
-The following webpurify methods are currently available:
+The following WebPurify methods are currently available:
 
 ```rust
 pub enum Method {

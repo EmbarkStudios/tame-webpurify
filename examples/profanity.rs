@@ -1,8 +1,8 @@
 use bytes::Bytes;
 use http::Request;
 use std::env;
-use webpurify_client::client;
-use webpurify_client::client::Region;
+use tame_webpurify_client::client;
+use tame_webpurify_client::client::Region;
 
 /// Return reqwest response
 async fn http_send<Body: Into<reqwest::Body>>(
