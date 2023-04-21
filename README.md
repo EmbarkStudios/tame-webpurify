@@ -6,7 +6,7 @@
 
 <div align="center">
 
-# `💩 tame-webpurify-client`
+# `💩 tame-webpurify`
 
 **Super simple client for the Webpurify REST API**
 
@@ -17,17 +17,17 @@
 [//]: # ([![Crates.io]&#40;https://img.shields.io/crates/v/rust-gpu.svg&#41;]&#40;https://crates.io/crates/rust-gpu&#41;)
 [//]: # ([![Docs]&#40;https://docs.rs/rust-gpu/badge.svg&#41;]&#40;https://docs.rs/rust-gpu&#41;)
 [//]: # ([![Git Docs]&#40;https://img.shields.io/badge/git%20main%20docs-published-blue&#41;]&#40;https://embarkstudios.github.io/presser/presser/index.html&#41;)
-[//]: # ([![dependency status]&#40;https://deps.rs/repo/github/EmbarkStudios/rust-gpu/status.svg&#41;]&#40;https://deps.rs/repo/github/EmbarkStudios/rust-gpu&#41;)
-[//]: # ([![Build status]&#40;https://github.com/EmbarkStudios/physx-rs/workflows/CI/badge.svg&#41;]&#40;https://github.com/EmbarkStudios/physx-rs/actions&#41;)
+[//]: # ([![dependency status]&#40;https://deps.rs/repo/github/EmbarkStudios/tame-webpurify/status.svg&#41;]&#40;https://deps.rs/repo/github/EmbarkStudios/rust-gpu&#41;)
+[//]: # ([![Build status]&#40;https://github.com/EmbarkStudios/tame-webpurify/workflows/CI/badge.svg&#41;]&#40;https://github.com/EmbarkStudios/physx-rs/actions&#41;)
 </div>
 
 ## What is this?
 
 An incredibly small library to interact with the https://www.webpurify.com/documentation/ REST API.
 
-`tame-webpurify-client` takes the [sans-io](https://sans-io.readthedocs.io/) approach and builds up the request objects for you so that you can use whatever library you're used to for the actual HTTP transport.
+`tame-webpurify` takes the [sans-io](https://sans-io.readthedocs.io/) approach and builds up the request objects for you so that you can use whatever library you're used to for the actual HTTP transport.
 
-See the example code on how to use it `tame-webpurify-client` together with [reqwest](https://crates.io/crates/reqwest)
+See the example code on how to use it `tame-webpurify` together with [reqwest](https://crates.io/crates/reqwest)
 ## Examples
 
 Build and run the provided example:
