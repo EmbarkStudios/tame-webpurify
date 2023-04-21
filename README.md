@@ -13,11 +13,12 @@
 <!--- FIXME: Update crate, repo and CI workflow names here! Remove any that are not relevant --->
 [![Embark](https://img.shields.io/badge/embark-open%20source-blueviolet.svg)](https://embark.dev)
 [![Embark](https://img.shields.io/badge/discord-embark-%237289da.svg?logo=discord)](https://discord.gg/dAuKfZS)
-[![Crates.io](https://img.shields.io/crates/v/rust-gpu.svg)](https://crates.io/crates/rust-gpu)
-[![Docs](https://docs.rs/rust-gpu/badge.svg)](https://docs.rs/rust-gpu)
-[![Git Docs](https://img.shields.io/badge/git%20main%20docs-published-blue)](https://embarkstudios.github.io/presser/presser/index.html)
-[![dependency status](https://deps.rs/repo/github/EmbarkStudios/rust-gpu/status.svg)](https://deps.rs/repo/github/EmbarkStudios/rust-gpu)
-[![Build status](https://github.com/EmbarkStudios/physx-rs/workflows/CI/badge.svg)](https://github.com/EmbarkStudios/physx-rs/actions)
+
+[//]: # ([![Crates.io]&#40;https://img.shields.io/crates/v/rust-gpu.svg&#41;]&#40;https://crates.io/crates/rust-gpu&#41;)
+[//]: # ([![Docs]&#40;https://docs.rs/rust-gpu/badge.svg&#41;]&#40;https://docs.rs/rust-gpu&#41;)
+[//]: # ([![Git Docs]&#40;https://img.shields.io/badge/git%20main%20docs-published-blue&#41;]&#40;https://embarkstudios.github.io/presser/presser/index.html&#41;)
+[//]: # ([![dependency status]&#40;https://deps.rs/repo/github/EmbarkStudios/rust-gpu/status.svg&#41;]&#40;https://deps.rs/repo/github/EmbarkStudios/rust-gpu&#41;)
+[//]: # ([![Build status]&#40;https://github.com/EmbarkStudios/physx-rs/workflows/CI/badge.svg&#41;]&#40;https://github.com/EmbarkStudios/physx-rs/actions&#41;)
 </div>
 
 ## What is this?

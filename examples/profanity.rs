@@ -32,8 +32,7 @@ pub async fn main() {
     let region = Region::Es;
     // sorry for the bad language :p
     // webpurify should filter out profanities as well as phone numbers and other contact info
-    let text =
-        "fuck you man! call me at +46123123123 or email me at some.name@example.com";
+    let text = "fuck you man! call me at +46123123123 or email me at some.name@example.com";
 
     let request = client::profanity_replace_request(api_key, region, text, "*").unwrap();
     println!("{:?}", &request.uri());
