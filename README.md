@@ -8,7 +8,7 @@
 
 # `💩 tame-webpurify`
 
-**Super simple client for the Webpurify REST API**
+**Super simple client for the WebPurify REST API**
 
 <!--- FIXME: Update crate, repo and CI workflow names here! Remove any that are not relevant --->
 [![Embark](https://img.shields.io/badge/embark-open%20source-blueviolet.svg)](https://embark.dev)
@@ -26,6 +26,9 @@
 An incredibly small library to interact with the https://www.webpurify.com/documentation/ REST API.
 
 `tame-webpurify` takes the [sans-io](https://sans-io.readthedocs.io/) approach and builds up the request objects for you so that you can use whatever library you're used to for the actual HTTP transport.
+
+Please be advised that the source code will contain some swearing etc. Can't test a profanity filter / content-moderation API 
+without actually acting like a jerk.
 
 See the example code on how to use it `tame-webpurify` together with [reqwest](https://crates.io/crates/reqwest)
 ## Examples

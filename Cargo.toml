@@ -1,6 +1,6 @@
 [package]
 name = "tame-webpurify"
-description = "Simple Rust client for the webpurify REST API"
+description = "Simple Rust client for the WebPurify REST API"
 version = "0.1.0"
 edition = "2021"
 
