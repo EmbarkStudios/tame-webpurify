@@ -16,10 +16,13 @@ pub enum Region {
     Europe,
     Us,
     Asia,
+    Es,
 }
 
 pub enum Method {
+    /// webpurify.live.check
     Check,
+    /// webpurify.live.check
     Replace(String),
 }
 
@@ -28,6 +31,7 @@ fn api_url_by_region(region: Region) -> String {
         Region::Us => "https://api1.webpurify.com/services/rest/",
         Region::Europe => "https://api1-eu.webpurify.com/services/rest/",
         Region::Asia => "https://api1-ap.webpurify.com/services/rest/",
+        Region::Es => "https://es-api.webpurify.net/services/rest/",
     }
     .to_string()
 }
