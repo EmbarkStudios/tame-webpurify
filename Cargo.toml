@@ -18,8 +18,10 @@ readme = "README.md"
 
 [dependencies]
 http = "0.2"
-url = "2.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
 thiserror = "1"
+url = "2.3"
 
 ## dev dependencies below
 [dev-dependencies]
