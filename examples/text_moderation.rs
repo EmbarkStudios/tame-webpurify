@@ -21,7 +21,7 @@ async fn http_send<Body: Into<reqwest::Body>>(
     Ok(builder.body(response.bytes().await?)?)
 }
 
-/// Run as `cargo run --example profanity -- --apikey <the-api-key>`
+/// Run as `cargo run --example text_moderation -- --apikey <the-api-key>`
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();
@@ -32,13 +32,13 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     // webpurify should filter out profanities as well as phone numbers and other contact info
     let text = "fuck you man! call me at +46123123123 or email me at some.name@example.com";
 
-    let request = client::profanity_replace_request(api_key, region, text, "*")?;
+    let request = client::text_replace_request(api_key, region, text, "*")?;
     println!("{:?}", &request.uri());
 
     let http_client = reqwest::Client::new();
     let response = http_send(&http_client, request).await?;
 
-    let result = client::profanity_replace_result(response)?;
+    let result = client::text_replace_result(response)?;
 
     println!("{:?}", &result);
 
