@@ -108,9 +108,9 @@ fn request_builder(api_uri: String) -> Result<Request<Vec<u8>>, RequestError> {
 /// # Examples
 /// ```
 /// use tame_webpurify::client;
-/// let res = client::text_check_request("some-api-key", client::Region::Europe, "my filthy user-input string");
+/// let res = client::profanity_check_request("some-api-key", client::Region::Europe, "my filthy user-input string");
 /// ```
-pub fn text_check_request(
+pub fn profanity_check_request(
     api_key: &str,
     region: Region,
     text: &str,
@@ -141,9 +141,9 @@ pub fn text_check_request(
 /// # Examples
 /// ```
 /// use tame_webpurify::client;
-/// let res = client::text_replace_request("some-api-key", client::Region::Europe, "my filthy user-input string", "*");
+/// let res = client::profanity_replace_request("some-api-key", client::Region::Europe, "my filthy user-input string", "*");
 /// ```
-pub fn text_replace_request(
+pub fn profanity_replace_request(
     api_key: &str,
     region: Region,
     text: &str,
@@ -185,7 +185,7 @@ where
 ///
 /// * `response` - a response object from the `WebPurify` `check` API call
 ///
-pub fn text_check_result(response: Response<Vec<u8>>) -> Result<bool, ResponseError> {
+pub fn profanity_check_result(response: Response<Vec<u8>>) -> Result<bool, ResponseError> {
     let response = parse_response(response)?;
 
     let check = response
@@ -203,7 +203,7 @@ pub fn text_check_result(response: Response<Vec<u8>>) -> Result<bool, ResponseEr
 ///
 /// * `response` - a response object from the `WebPurify` `replace` API call
 ///
-pub fn text_replace_result<T>(response: Response<T>) -> Result<String, ResponseError>
+pub fn profanity_replace_result<T>(response: Response<T>) -> Result<String, ResponseError>
 where
     T: AsRef<[u8]>,
 {
@@ -239,7 +239,7 @@ mod test {
     #[test]
     fn check_request() {
         let region = client::Region::Europe;
-        let req = client::text_check_request("abcd", region, "hi there");
+        let req = client::profanity_check_request("abcd", region, "hi there");
         assert_eq!(
             req.unwrap().uri(),
             "https://api1-eu.webpurify.com/services/rest/?format=json&api_key=abcd&text=hi+there&method=webpurify.live.check&semail=1&slink=1&rsp=1&sphone=1"
@@ -254,9 +254,9 @@ mod test {
                 .status(StatusCode::OK)
                 .body(body.as_bytes().to_vec())
         };
-        let result = client::text_check_result(response_found(3)?)?;
+        let result = client::profanity_check_result(response_found(3)?)?;
         assert!(result);
-        let result = client::text_check_result(response_found(0)?)?;
+        let result = client::profanity_check_result(response_found(0)?)?;
         assert!(!result);
         Ok(())
     }
@@ -264,7 +264,7 @@ mod test {
     #[test]
     fn replace_request() {
         let region = client::Region::Europe;
-        let res_req = client::text_replace_request("abcd", region, "hi there", "*");
+        let res_req = client::profanity_replace_request("abcd", region, "hi there", "*");
         let req = res_req.unwrap();
         assert!(uri_contains(&req, "method=webpurify.live.replace"));
         assert!(uri_contains(&req, "replacesymbol=*"));
@@ -277,7 +277,7 @@ mod test {
         let response = Response::builder()
             .status(StatusCode::OK)
             .body((*body).into_iter().collect::<Vec<_>>())?;
-        let result = client::text_replace_result(response)?;
+        let result = client::profanity_replace_result(response)?;
 
         assert_eq!(result, "foo".to_owned());
         Ok(())
