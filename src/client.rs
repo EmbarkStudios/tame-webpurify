@@ -91,9 +91,25 @@ fn request_builder(api_uri: String) -> Result<Request<Vec<u8>>, RequestError> {
     Ok(req)
 }
 
-/// Create and return a request object for profanity filtering against webpurify.
-/// Extend the function when more languages are required
+/// `WebPurify` returns the number of matched profanities, PII etc.
+/// This function only returns a request object, you need to do the actual HTTP request yourself.
+///
+/// Extend the function when more languages are required.
 /// Documentation: <https://www.webpurify.com/documentation/additional/language/>
+///
+/// # Arguments
+///
+/// * `api_key` - a string slice that holds your `WebPurify` API Key
+///
+/// * `region` - the regional `WebPurify` API to use
+///
+/// * `text` - a string slice to be checked by `WebPurify`
+///
+/// # Examples
+/// ```
+/// use tame_webpurify::client;
+/// let res = client::profanity_check_request("some-api-key", client::Region::Europe, "my filthy user-input string");
+/// ```
 pub fn profanity_check_request(
     api_key: &str,
     region: Region,
@@ -106,7 +122,27 @@ pub fn profanity_check_request(
     Ok(req)
 }
 
-/// Replace profanities with a given symbol
+/// `WebPurify` replaces matched profanities, PII etc with a given symbol.
+/// This function only returns a request object, you need to do the actual HTTP request yourself.
+///
+/// Extend the function when more languages are required.
+/// Documentation: <https://www.webpurify.com/documentation/additional/language/>
+///
+/// # Arguments
+///
+/// * `api_key` - a string slice that holds your `WebPurify` API Key
+///
+/// * `region` - the regional `WebPurify` API to use
+///
+/// * `text` - a string slice you want to be moderated by `WebPurify`
+///
+/// * `replace_text` - a string slice to replace profanities in `text` with
+///
+/// # Examples
+/// ```
+/// use tame_webpurify::client;
+/// let res = client::profanity_replace_request("some-api-key", client::Region::Europe, "my filthy user-input string", "*");
+/// ```
 pub fn profanity_replace_request(
     api_key: &str,
     region: Region,
@@ -143,8 +179,13 @@ where
     Ok(serde_json::from_slice(body.as_ref())?)
 }
 
-/// Check for profanities result based on response
-pub fn profanity_check_result(response: http::Response<Vec<u8>>) -> Result<bool, ResponseError> {
+/// Returns true if `WebPurify` flagged a request to contain profanities, PII, etc
+///
+/// # Arguments
+///
+/// * `response` - a response object from the `WebPurify` `check` API call
+///
+pub fn profanity_check_result(response: Response<Vec<u8>>) -> Result<bool, ResponseError> {
     let response = parse_response(response)?;
 
     let check = response
@@ -156,18 +197,22 @@ pub fn profanity_check_result(response: http::Response<Vec<u8>>) -> Result<bool,
     Ok(check > 0)
 }
 
-/// Replace profanities with a given symbol result based on response
-pub fn profanity_replace_result<T>(response: http::Response<T>) -> Result<String, ResponseError>
+/// Returns the sanitized string from a response object.
+///
+/// # Arguments
+///
+/// * `response` - a response object from the `WebPurify` `replace` API call
+///
+pub fn profanity_replace_result<T>(response: Response<T>) -> Result<String, ResponseError>
 where
     T: AsRef<[u8]>,
 {
     let response = parse_response(response)?;
 
-    let Some(text) = response.rsp.text else {
-        return Err(ResponseError::MissingField("text".to_owned()))
-    };
-
-    Ok(text)
+    match response.rsp.text {
+        Some(text) => Ok(text),
+        None => Err(ResponseError::MissingField("text".to_owned())),
+    }
 }
 
 #[cfg(test)]
