@@ -20,6 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release - support for WebPurify `check` and `replace` methods
 
 <!-- next-url -->
-[Unreleased]: https://github.com/EmbarkStudios/$REPO_NAME/compare/0.1.1...HEAD
-[0.1.1]: https://github.com/EmbarkStudios/$REPO_NAME/compare/0.1.0...0.1.1
-[0.1.0]: https://github.com/EmbarkStudios/$REPO_NAME/releases/tag/0.1.0
+[Unreleased]: https://github.com/EmbarkStudios/tame-webpurify/compare/0.1.1...HEAD
+[0.1.1]: https://github.com/EmbarkStudios/tame-webpurify/compare/0.1.0...0.1.1
+[0.1.0]: https://github.com/EmbarkStudios/tame-webpurify/releases/tag/0.1.0
