@@ -1,5 +1,5 @@
 use http::header::CONTENT_TYPE;
-use http::{Request, Uri};
+use http::{Request, Response, Uri};
 use url::form_urlencoded;
 
 #[derive(thiserror::Error, Debug)]
@@ -12,6 +12,20 @@ pub enum RequestError {
     HTTP(#[from] http::Error),
 }
 
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum ResponseError {
+    #[error("The response status was invalid: {0}")]
+    HttpStatus(http::StatusCode),
+    #[error(transparent)]
+    Deserialize(#[from] serde_json::Error),
+    #[error("Missing field {0} in response")]
+    MissingField(String),
+    #[error("Invalid field {0} in response")]
+    InvalidField(String),
+}
+
+#[derive(Clone, Copy)]
 pub enum Region {
     Europe,
     Us,
@@ -77,9 +91,25 @@ fn request_builder(api_uri: String) -> Result<Request<Vec<u8>>, RequestError> {
     Ok(req)
 }
 
-/// Create and return a request object for profanity filtering against webpurify.
-/// Extend the function when more languages are required
+/// `WebPurify` returns the number of matched profanities, PII etc.
+/// This function only returns a request object, you need to do the actual HTTP request yourself.
+///
+/// Extend the function when more languages are required.
 /// Documentation: <https://www.webpurify.com/documentation/additional/language/>
+///
+/// # Arguments
+///
+/// * `api_key` - a string slice that holds your `WebPurify` API Key
+///
+/// * `region` - the regional `WebPurify` API to use
+///
+/// * `text` - a string slice to be checked by `WebPurify`
+///
+/// # Examples
+/// ```
+/// use tame_webpurify::client;
+/// let res = client::profanity_check_request("some-api-key", client::Region::Europe, "my filthy user-input string");
+/// ```
 pub fn profanity_check_request(
     api_key: &str,
     region: Region,
@@ -92,7 +122,27 @@ pub fn profanity_check_request(
     Ok(req)
 }
 
-/// Replace profanities with a given symbol
+/// `WebPurify` replaces matched profanities, PII etc with a given symbol.
+/// This function only returns a request object, you need to do the actual HTTP request yourself.
+///
+/// Extend the function when more languages are required.
+/// Documentation: <https://www.webpurify.com/documentation/additional/language/>
+///
+/// # Arguments
+///
+/// * `api_key` - a string slice that holds your `WebPurify` API Key
+///
+/// * `region` - the regional `WebPurify` API to use
+///
+/// * `text` - a string slice you want to be moderated by `WebPurify`
+///
+/// * `replace_text` - a string slice to replace profanities in `text` with
+///
+/// # Examples
+/// ```
+/// use tame_webpurify::client;
+/// let res = client::profanity_replace_request("some-api-key", client::Region::Europe, "my filthy user-input string", "*");
+/// ```
 pub fn profanity_replace_request(
     api_key: &str,
     region: Region,
@@ -106,10 +156,73 @@ pub fn profanity_replace_request(
     Ok(req)
 }
 
+#[derive(serde::Deserialize)]
+struct ApiResponse {
+    rsp: ApiResponseRsp,
+}
+
+#[derive(serde::Deserialize)]
+struct ApiResponseRsp {
+    found: String,
+    text: Option<String>,
+}
+
+fn parse_response<T>(response: Response<T>) -> Result<ApiResponse, ResponseError>
+where
+    T: AsRef<[u8]>,
+{
+    if !response.status().is_success() {
+        return Err(ResponseError::HttpStatus(response.status()));
+    }
+
+    let body = response.body();
+    Ok(serde_json::from_slice(body.as_ref())?)
+}
+
+/// Returns true if `WebPurify` flagged a request to contain profanities, PII, etc
+///
+/// # Arguments
+///
+/// * `response` - a response object from the `WebPurify` `check` API call
+///
+pub fn profanity_check_result(response: Response<Vec<u8>>) -> Result<bool, ResponseError> {
+    let response = parse_response(response)?;
+
+    let check = response
+        .rsp
+        .found
+        .parse::<u32>()
+        .map_err(|_err| ResponseError::InvalidField("found".to_owned()))?;
+
+    Ok(check > 0)
+}
+
+/// Returns the sanitized string from a response object.
+///
+/// # Arguments
+///
+/// * `response` - a response object from the `WebPurify` `replace` API call
+///
+pub fn profanity_replace_result<T>(response: Response<T>) -> Result<String, ResponseError>
+where
+    T: AsRef<[u8]>,
+{
+    let response = parse_response(response)?;
+
+    match response.rsp.text {
+        Some(text) => Ok(text),
+        None => Err(ResponseError::MissingField("text".to_owned())),
+    }
+}
+
 #[cfg(test)]
 mod test {
+    use std::error::Error;
+
     use crate::client;
     use http::Request;
+    use http::Response;
+    use http::StatusCode;
 
     fn uri_contains(req: &Request<Vec<u8>>, needle: &str) -> bool {
         req.uri().to_string().contains(needle)
@@ -120,7 +233,7 @@ mod test {
         assert_eq!(
             client::query_string("abcd", "hi there", client::Method::Check),
             "format=json&api_key=abcd&text=hi+there&method=webpurify.live.check&semail=1&slink=1&rsp=1&sphone=1"
-        )
+        );
     }
 
     #[test]
@@ -134,6 +247,21 @@ mod test {
     }
 
     #[test]
+    fn check_result() -> Result<(), Box<dyn Error>> {
+        let response_found = |found: u32| {
+            let body = format!("{{\"rsp\":{{\"@attributes\":{{\"stat\":\"ok\",\"rsp\":\"0.0072040557861328\"}},\"method\":\"webpurify.live.check\",\"format\":\"rest\",\"found\":\"{found}\",\"api_key\":\"123\"}}}}");
+            Response::builder()
+                .status(StatusCode::OK)
+                .body(body.as_bytes().to_vec())
+        };
+        let result = client::profanity_check_result(response_found(3)?)?;
+        assert!(result);
+        let result = client::profanity_check_result(response_found(0)?)?;
+        assert!(!result);
+        Ok(())
+    }
+
+    #[test]
     fn replace_request() {
         let region = client::Region::Europe;
         let res_req = client::profanity_replace_request("abcd", region, "hi there", "*");
@@ -141,5 +269,17 @@ mod test {
         assert!(uri_contains(&req, "method=webpurify.live.replace"));
         assert!(uri_contains(&req, "replacesymbol=*"));
         assert!(uri_contains(&req, "text=hi+there"));
+    }
+
+    #[test]
+    fn replace_result() -> Result<(), Box<dyn Error>> {
+        let body = b"{\"rsp\":{\"@attributes\":{\"stat\":\"ok\",\"rsp\":\"0.018898963928223\"},\"method\":\"webpurify.live.replace\",\"format\":\"rest\",\"found\":\"3\",\"text\":\"foo\",\"api_key\":\"123\"}}";
+        let response = Response::builder()
+            .status(StatusCode::OK)
+            .body((*body).into_iter().collect::<Vec<_>>())?;
+        let result = client::profanity_replace_result(response)?;
+
+        assert_eq!(result, "foo".to_owned());
+        Ok(())
     }
 }
