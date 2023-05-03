@@ -1,5 +1,6 @@
 use http::header::CONTENT_TYPE;
 use http::{Request, Response, Uri};
+use serde_json::Value;
 use url::form_urlencoded;
 
 #[derive(thiserror::Error, Debug)]
@@ -33,11 +34,14 @@ pub enum Region {
     Es,
 }
 
+#[derive(Clone)]
 pub enum Method {
     /// webpurify.live.check
     Check,
     /// webpurify.live.check
     Replace(String),
+    /// webpurify.live.smartscreen
+    SmartScreen(String, bool, bool),
 }
 
 fn api_url_by_region(region: Region) -> String {
@@ -54,9 +58,11 @@ fn api_url_by_region(region: Region) -> String {
 ///     Check - returns 1 if profanity is found, otherwise 0
 ///     Replace - returns 1 if profanity if found and replaces
 pub fn query_string(api_key: &str, text: &str, method: Method) -> String {
-    let method_str = match method {
+    let method_str = match method.clone() {
         Method::Check => "webpurify.live.check".to_string(),
         Method::Replace(_) => "webpurify.live.replace".to_string(),
+        // TODO(mathias): Change to actually convey meaning about the args (text, sentiment, topics)
+        Method::SmartScreen(_, _, _) => "webpurify.live.smartscreen".to_string(),
     };
 
     let mut serializer = form_urlencoded::Serializer::new(String::new());
@@ -70,8 +76,14 @@ pub fn query_string(api_key: &str, text: &str, method: Method) -> String {
         .append_pair("rsp", "1")
         .append_pair("sphone", "1");
 
-    if let Method::Replace(replace_with) = method {
+    if let Method::Replace(replace_with) = method.clone() {
         qs.append_pair("replacesymbol", &replace_with);
+    }
+
+    if let Method::SmartScreen(replace_with, _sentiment, _topics) = method.clone() {
+        qs.append_pair("replacesymbol", &replace_with);
+        qs.append_pair("sentiment", "true");
+        qs.append_pair("topics", "true");
     }
 
     qs.finish()
@@ -156,6 +168,20 @@ pub fn profanity_replace_request(
     Ok(req)
 }
 
+pub fn smart_screen_request(
+    api_key: &str,
+    region: Region,
+    text: &str,
+    replace_text: &str,
+) -> Result<Request<Vec<u8>>, RequestError> {
+    let qs = query_string(api_key, text, Method::SmartScreen(replace_text.to_string(), true, true));
+    let api_uri = format!("{}?{}", api_url_by_region(region), qs);
+
+    let req = request_builder(api_uri)?;
+    Ok(req)
+}
+
+
 #[derive(serde::Deserialize)]
 struct ApiResponse {
     rsp: ApiResponseRsp,
@@ -171,6 +197,61 @@ fn parse_response<T>(response: Response<T>) -> Result<ApiResponse, ResponseError
 where
     T: AsRef<[u8]>,
 {
+    if !response.status().is_success() {
+        return Err(ResponseError::HttpStatus(response.status()));
+    }
+
+    let body = response.body();
+    Ok(serde_json::from_slice(body.as_ref())?)
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ApiSmartScreenResponseSentiment {
+    text: String,
+    polarity: String,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ApiSmartScreenResponse {
+    #[serde(deserialize_with="de_bool")]
+    pub bigotry: bool,
+    #[serde(deserialize_with="de_bool")]
+    pub personal_attack: bool,
+    #[serde(deserialize_with="de_bool")]
+    pub sexual_advances: bool,
+    #[serde(deserialize_with="de_bool")]
+    pub criminal_activity: bool,
+    #[serde(deserialize_with="de_bool")]
+    pub external_contact: bool,
+    #[serde(deserialize_with="de_bool")]
+    pub profanity: bool,
+    pub profanity_found: Option<Vec<String>>,
+    pub replace_text: Option<String>,
+
+    /// Only active if "topics=true" is passed to WebPurify in the query string
+    pub topics: Option<Vec<String>>,
+
+    /// Only active if "sentiment=true" is passed to WebPurify in the query string
+    pub overall_sentiment: Option<String>,
+    /// Only active if "sentiment=true" is passed to WebPurify in the query string
+    pub sentiment: Option<Vec<ApiSmartScreenResponseSentiment>>,
+}
+
+fn de_bool<'de, D>(deserializer: D) -> Result<bool, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+{
+    let s: String = serde::de::Deserialize::deserialize(deserializer)?;
+
+    match s.as_str() {
+        "true" => Ok(true),
+        "false" => Ok(false),
+        _ => Err(serde::de::Error::unknown_variant(&s, &["true", "false"])),
+    }
+}
+
+fn parse_smart_screen_response<T>(response: Response<T>) -> Result<ApiSmartScreenResponse, ResponseError>
+where T: AsRef<[u8]>, {
     if !response.status().is_success() {
         return Err(ResponseError::HttpStatus(response.status()));
     }
@@ -213,6 +294,14 @@ where
         Some(text) => Ok(text),
         None => Err(ResponseError::MissingField("text".to_owned())),
     }
+}
+
+pub fn smart_screen_result<T>(response: Response<T>) -> Result<ApiSmartScreenResponse, ResponseError>
+where
+    T: AsRef<[u8]>,
+{
+    let res = parse_smart_screen_response(response)?;
+    Ok(res)
 }
 
 #[cfg(test)]
