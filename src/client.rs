@@ -185,7 +185,10 @@ where
 ///
 /// * `response` - a response object from the `WebPurify` `check` API call
 ///
-pub fn profanity_check_result(response: Response<Vec<u8>>) -> Result<bool, ResponseError> {
+pub fn profanity_check_result<T>(response: Response<T>) -> Result<bool, ResponseError>
+where
+    T: AsRef<[u8]>,
+{
     let response = parse_response(response)?;
 
     let check = response
