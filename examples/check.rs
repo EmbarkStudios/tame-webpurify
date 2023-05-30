@@ -17,15 +17,15 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     // webpurify should filter out profanities as well as phone numbers and other contact info
     let text = "fuck you man! call me at +46123123123 or email me at some.name@example.com";
 
-    let request = client::profanity_replace_request(api_key, region, text, "*")?;
+    let request = client::profanity_check_request(api_key, region, text)?;
     println!("{:?}", &request.uri());
 
     let http_client = reqwest::Client::new();
     let response = common::http_send(&http_client, request).await?;
 
-    let result = client::profanity_replace_result(response)?;
+    let result = client::profanity_check_result(response)?;
 
-    println!("{:?}", &result);
+    println!("Found {:?} bad words", &result);
 
     Ok(())
 }

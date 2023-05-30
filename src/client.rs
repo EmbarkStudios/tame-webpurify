@@ -191,13 +191,13 @@ where
 {
     let response = parse_response(response)?;
 
-    let check = response
+    let check: u32 = response
         .rsp
         .found
         .ok_or_else(|| ResponseError::MissingField("found".to_owned()))
         .and_then(|found| {
             found
-                .parse::<u32>()
+                .parse()
                 .map_err(|_err| ResponseError::InvalidField("found".to_owned()))
         })?;
 
