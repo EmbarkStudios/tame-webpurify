@@ -21,7 +21,7 @@ async fn http_send<Body: Into<reqwest::Body>>(
     Ok(builder.body(response.bytes().await?)?)
 }
 
-/// Run as `cargo run --example profanity -- --apikey <the-api-key>`
+/// Run as `cargo run --example smart_screen -- --apikey <the-api-key>`
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();

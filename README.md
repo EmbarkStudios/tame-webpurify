@@ -31,12 +31,13 @@ Please be advised that the source code will contain some swearing etc. Can't tes
 without actually acting like a jerk.
 
 See the example code on how to use it `tame-webpurify` together with [reqwest](https://crates.io/crates/reqwest)
+
 ## Examples
 
 Build and run the provided example:
 
 ```bash
-$ cargo run --example profanity -- --apikey <your-webpurify-api-key>
+$ cargo run --example replace -- --apikey <your-webpurify-api-key>
 => 
  
 {
@@ -58,6 +59,8 @@ $ cargo run --example profanity -- --apikey <your-webpurify-api-key>
   }
 }
 ```
+
+See the [examples dir](https://github.com/EmbarkStudios/tame-webpurify/tree/main/examples) for more examples. 
 
 ## Supported methods
 
