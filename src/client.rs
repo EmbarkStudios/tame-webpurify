@@ -206,12 +206,14 @@ where
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct ApiSmartScreenResponseSentiment {
     text: String,
     polarity: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct ApiSmartScreenResponse {
     #[serde(deserialize_with="de_bool")]
     pub bigotry: bool,
@@ -399,6 +401,50 @@ mod test {
         let result = client::profanity_replace_result(response)?;
 
         assert_eq!(result, "foo".to_owned());
+        Ok(())
+    }
+
+    #[test]
+    fn smart_screen_request() -> Result<(), Box<dyn Error>> {
+        let region = client::Region::Europe;
+        let req = client::smart_screen_request("abcd", region, "hi there", "*")?;
+        assert!(uri_contains(&req, "method=webpurify.live.smartscreen"));
+        assert!(uri_contains(&req, "replacesymbol=*"));
+        assert!(uri_contains(&req, "text=hi+there"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn smart_screen_result() -> Result<(), Box<dyn Error>> {
+        let body = b"{\"language\":\"en\",\"bigotry\":\"false\",\"personal_attack\":\"false\",\"sexual_advances\":\"false\",\
+                                  \"criminal_activity\":\"false\",\"external_contact\":\"false\",\"mental_health\":\"false\",\"profanity\":\"true\",\
+                                  \"profanity_found\":[\"hell\"],\"replace_text\":\"To **** and back\",\"overall_sentmient\":\"negative\",\
+                                  \"sentiment\":[{\"text\":\"to hell and back\",\"polarity\":\"negative\"}]}";
+        let response = Response::builder()
+            .status(StatusCode::OK)
+            .body((*body).into_iter().collect::<Vec<_>>())?;
+        let result = client::smart_screen_result(response)?;
+
+        assert_eq!(
+            result,
+            client::ApiSmartScreenResponse {
+                bigotry: false,
+                personal_attack: false,
+                sexual_advances: false,
+                criminal_activity: false,
+                external_contact: false,
+                profanity: true,
+                profanity_found: Some(vec!["hell".to_owned()]),
+                replace_text: Some("To **** and back".to_owned()),
+                topics: None,
+                overall_sentiment: None,
+                sentiment: Some(vec![client::ApiSmartScreenResponseSentiment {
+                    text: "to hell and back".to_owned(),
+                    polarity: "negative".to_owned()
+                }])
+            }
+        );
         Ok(())
     }
 }
