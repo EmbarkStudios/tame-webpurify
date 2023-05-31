@@ -70,3 +70,27 @@
 // crate-specific exceptions
 
 pub mod client;
+pub mod smart_screen;
+
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum RequestError {
+    #[error("The provided Uri was invalid")]
+    InvalidUri,
+
+    #[error(transparent)]
+    HTTP(#[from] http::Error),
+}
+
+#[derive(thiserror::Error, Debug)]
+#[allow(clippy::upper_case_acronyms)]
+pub enum ResponseError {
+    #[error("The response status was invalid: {0}")]
+    HttpStatus(http::StatusCode),
+    #[error(transparent)]
+    Deserialize(#[from] serde_json::Error),
+    #[error("Missing field {0} in response")]
+    MissingField(String),
+    #[error("Invalid field {0} in response")]
+    InvalidField(String),
+}
