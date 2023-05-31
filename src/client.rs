@@ -163,7 +163,7 @@ struct ApiResponse {
 
 #[derive(serde::Deserialize)]
 struct ApiResponseRsp {
-    found: String,
+    found: Option<String>,
     text: Option<String>,
 }
 
@@ -185,14 +185,21 @@ where
 ///
 /// * `response` - a response object from the `WebPurify` `check` API call
 ///
-pub fn profanity_check_result(response: Response<Vec<u8>>) -> Result<bool, ResponseError> {
+pub fn profanity_check_result<T>(response: Response<T>) -> Result<bool, ResponseError>
+where
+    T: AsRef<[u8]>,
+{
     let response = parse_response(response)?;
 
-    let check = response
+    let check: u32 = response
         .rsp
         .found
-        .parse::<u32>()
-        .map_err(|_err| ResponseError::InvalidField("found".to_owned()))?;
+        .ok_or_else(|| ResponseError::MissingField("found".to_owned()))
+        .and_then(|found| {
+            found
+                .parse()
+                .map_err(|_err| ResponseError::InvalidField("found".to_owned()))
+        })?;
 
     Ok(check > 0)
 }
@@ -262,6 +269,17 @@ mod test {
     }
 
     #[test]
+    fn check_result_missing_found() -> Result<(), Box<dyn Error>> {
+        let body = format!("{{\"rsp\":{{\"@attributes\":{{\"stat\":\"ok\",\"rsp\":\"0.0072040557861328\"}},\"method\":\"webpurify.live.check\",\"format\":\"rest\",\"api_key\":\"123\"}}}}");
+        let response = Response::builder()
+            .status(StatusCode::OK)
+            .body(body.as_bytes().to_vec());
+        let result = client::profanity_check_result(response?);
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
     fn replace_request() {
         let region = client::Region::Europe;
         let res_req = client::profanity_replace_request("abcd", region, "hi there", "*");
@@ -274,6 +292,18 @@ mod test {
     #[test]
     fn replace_result() -> Result<(), Box<dyn Error>> {
         let body = b"{\"rsp\":{\"@attributes\":{\"stat\":\"ok\",\"rsp\":\"0.018898963928223\"},\"method\":\"webpurify.live.replace\",\"format\":\"rest\",\"found\":\"3\",\"text\":\"foo\",\"api_key\":\"123\"}}";
+        let response = Response::builder()
+            .status(StatusCode::OK)
+            .body((*body).into_iter().collect::<Vec<_>>())?;
+        let result = client::profanity_replace_result(response)?;
+
+        assert_eq!(result, "foo".to_owned());
+        Ok(())
+    }
+
+    #[test]
+    fn replace_result_missing_found() -> Result<(), Box<dyn Error>> {
+        let body = b"{\"rsp\":{\"@attributes\":{\"stat\":\"ok\",\"rsp\":\"0.018898963928223\"},\"method\":\"webpurify.live.replace\",\"format\":\"rest\",\"text\":\"foo\",\"api_key\":\"123\"}}";
         let response = Response::builder()
             .status(StatusCode::OK)
             .body((*body).into_iter().collect::<Vec<_>>())?;
