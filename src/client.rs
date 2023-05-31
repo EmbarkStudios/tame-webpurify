@@ -263,7 +263,7 @@ mod test {
     }
 
     #[test]
-    fn check_result_mssing_found() -> Result<(), Box<dyn Error>> {
+    fn check_result_missing_found() -> Result<(), Box<dyn Error>> {
         let body = format!("{{\"rsp\":{{\"@attributes\":{{\"stat\":\"ok\",\"rsp\":\"0.0072040557861328\"}},\"method\":\"webpurify.live.check\",\"format\":\"rest\",\"api_key\":\"123\"}}}}");
         let response = Response::builder()
             .status(StatusCode::OK)
