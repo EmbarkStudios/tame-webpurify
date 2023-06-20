@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+### Fixed
+- [PR#12](https://github.com/EmbarkStudios/tame-webpurify/pull/12) Return the number of profanities found in the `check` response.
 
 ## [0.1.2] - 2023-05-31
 ### Added
