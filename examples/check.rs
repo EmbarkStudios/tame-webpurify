@@ -25,7 +25,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     let result = client::profanity_check_result(response)?;
 
-    println!("Found {:?} bad words", &result);
+    println!("Found bad words: {result}");
 
     Ok(())
 }
