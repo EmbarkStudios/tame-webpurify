@@ -266,7 +266,8 @@ where
 {
     let response = parse_response(response, Method::Check)?;
 
-    let check: u32 = response
+    // Note, `found` is a boolean in the form of an integer, see: https://www.webpurify.com/documentation/methods/check/
+    let found: u32 = response
         .rsp
         .found
         .ok_or_else(|| ResponseError::MissingField("found".to_owned()))
@@ -276,7 +277,7 @@ where
                 .map_err(|_err| ResponseError::InvalidField("found".to_owned()))
         })?;
 
-    Ok(check > 0)
+    Ok(found > 0)
 }
 
 /// Returns the sanitized string from a response object.
