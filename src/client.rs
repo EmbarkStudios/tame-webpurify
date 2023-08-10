@@ -253,18 +253,20 @@ where
 
     Ok(api_response)
 }
-/// Returns the number of profanities, PII etc `WebPurify` matched in the input string.
+
+/// Returns true if `WebPurify` flagged a request to contain profanities, PII, etc
 ///
 /// # Arguments
 ///
 /// * `response` - a response object from the `WebPurify` `check` API call
 ///
-pub fn profanity_check_result<T>(response: Response<T>) -> Result<u32, ResponseError>
+pub fn profanity_check_result<T>(response: Response<T>) -> Result<bool, ResponseError>
 where
     T: AsRef<[u8]>,
 {
     let response = parse_response(response, Method::Check)?;
 
+    // Note, `found` is a boolean in the form of an integer, see: https://www.webpurify.com/documentation/methods/check/
     let found: u32 = response
         .rsp
         .found
@@ -275,7 +277,7 @@ where
                 .map_err(|_err| ResponseError::InvalidField("found".to_owned()))
         })?;
 
-    Ok(found)
+    Ok(found > 0)
 }
 
 /// Returns the sanitized string from a response object.
@@ -336,9 +338,9 @@ mod test {
                 .body(body.as_bytes().to_vec())
         };
         let result = client::profanity_check_result(response_found(3)?)?;
-        assert_eq!(result, 3);
+        assert!(result);
         let result = client::profanity_check_result(response_found(0)?)?;
-        assert_eq!(result, 0);
+        assert!(!result);
         Ok(())
     }
 
