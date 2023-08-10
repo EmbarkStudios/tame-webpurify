@@ -46,11 +46,13 @@ pub fn smart_screen_request(
     region: Region,
     text: &str,
     replace_text: &str,
+    sentiment: bool,
+    topics: bool,
 ) -> Result<Request<Vec<u8>>, RequestError> {
     let qs = query_string(
         api_key,
         text,
-        Method::SmartScreen(replace_text.to_string(), true, true),
+        Method::SmartScreen(replace_text.to_string(), sentiment, topics),
     );
     let api_uri = format!("{}?{}", api_url_by_region(region), qs);
 
@@ -98,13 +100,19 @@ where
 #[cfg(test)]
 mod test {
     use crate::client;
-    use http::{Response, StatusCode};
+    use http::Request;
+    use http::Response;
+    use http::StatusCode;
     use std::error::Error;
+
+    fn uri_contains(req: &Request<Vec<u8>>, needle: &str) -> bool {
+        req.uri().to_string().contains(needle)
+    }
 
     #[test]
     fn smart_screen_request() -> Result<(), Box<dyn Error>> {
         let region = crate::client::Region::Europe;
-        let req = client::smart_screen_request("abcd", region, "hi there", "*")?;
+        let req = client::smart_screen_request("abcd", region, "hi there", "*", true, true)?;
         assert!(uri_contains(&req, "method=webpurify.live.smartscreen"));
         assert!(uri_contains(&req, "replacesymbol=*"));
         assert!(uri_contains(&req, "text=hi+there"));

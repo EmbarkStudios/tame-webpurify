@@ -8,6 +8,13 @@ pub use crate::smart_screen::smart_screen_result;
 pub use crate::smart_screen::ApiSmartScreenResponse;
 pub use crate::smart_screen::ApiSmartScreenResponseSentiment;
 
+fn bool_to_str(value: bool) -> &'static str {
+    match value {
+        true => "true",
+        false => "false",
+    }
+}
+
 #[derive(Clone, Copy)]
 pub enum Region {
     Europe,
@@ -62,10 +69,12 @@ pub fn query_string(api_key: &str, text: &str, method: Method) -> String {
         qs.append_pair("replacesymbol", &replace_with);
     }
 
-    if let Method::SmartScreen(replace_with, _sentiment, _topics) = method {
+    if let Method::SmartScreen(replace_with, sentiment, topics) = method {
+        let sentiment_str = bool_to_str(sentiment);
+        let topics_str = bool_to_str(topics);
         qs.append_pair("replacesymbol", &replace_with);
-        qs.append_pair("sentiment", "true");
-        qs.append_pair("topics", "true");
+        qs.append_pair("sentiment", sentiment_str);
+        qs.append_pair("topics", topics_str);
     }
 
     qs.finish()

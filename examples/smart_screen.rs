@@ -32,7 +32,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     // webpurify should filter out profanities as well as phone numbers and other contact info
     let text = "I simply don't like you asshat. You are a potential threat and I will not accept any prisoners who get close to me. Just fuck you";
 
-    let request = client::smart_screen_request(api_key, region, text, "*")?;
+    let request = client::smart_screen_request(api_key, region, text, "*", true, true)?;
     println!("{:?}", &request.uri());
 
     let http_client = reqwest::Client::new();
