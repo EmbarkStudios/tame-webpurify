@@ -9,8 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- next-header -->
 ## [Unreleased] - ReleaseDate
+### Fixed
+- [PR#13](https://github.com/EmbarkStudios/tame-webpurify/pull/13) Return the number of profanities found in the `check` response.
 
-## [0.1.2] - 2023-05-30
+## [0.1.2] - 2023-05-31
+### Added
+- [PR#9](https://github.com/EmbarkStudios/tame-webpurify/pull/9) Add coverage of error cases from api responses and tests for those
 ### Fixed
 - [PR#7](https://github.com/EmbarkStudios/tame-webpurify/pull/7) Handle if Webpurify API response doesn't include `found` field.
 

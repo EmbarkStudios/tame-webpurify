@@ -1,4 +1,5 @@
-use crate::{RequestError, ResponseError};
+use crate::RequestError;
+use crate::ResponseError;
 use http::header::CONTENT_TYPE;
 use http::{Request, Response, Uri};
 use url::form_urlencoded;
@@ -23,14 +24,24 @@ pub enum Region {
     Es,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum Method {
     /// webpurify.live.check
     Check,
-    /// webpurify.live.check
+    /// webpurify.live.replace
     Replace(String),
     /// webpurify.live.smartscreen
     SmartScreen(String, bool, bool),
+}
+
+impl Method {
+    fn method_str(&self) -> &'static str {
+        match self {
+            Method::Check => "webpurify.live.check",
+            Method::Replace(_) => "webpurify.live.replace",
+            Method::SmartScreen(_, _, _) => "webpurify.live.smartscreen",
+        }
+    }
 }
 
 pub(crate) fn api_url_by_region(region: Region) -> String {
@@ -47,12 +58,7 @@ pub(crate) fn api_url_by_region(region: Region) -> String {
 ///     Check - returns 1 if profanity is found, otherwise 0
 ///     Replace - returns 1 if profanity if found and replaces
 pub fn query_string(api_key: &str, text: &str, method: Method) -> String {
-    let method_str = match method {
-        Method::Check => "webpurify.live.check".to_string(),
-        Method::Replace(_) => "webpurify.live.replace".to_string(),
-        // TODO(mathias): Change to actually convey meaning about the args (text, sentiment, topics)
-        Method::SmartScreen(_, _, _) => "webpurify.live.smartscreen".to_string(),
-    };
+    let method_str = method.method_str();
 
     let mut serializer = form_urlencoded::Serializer::new(String::new());
     let qs = serializer
@@ -166,11 +172,32 @@ struct ApiResponse {
 
 #[derive(serde::Deserialize)]
 struct ApiResponseRsp {
+    #[serde(rename = "@attributes")]
+    attributes: ApiResponseRspAttributes,
+    err: Option<ApiResponseErr>,
+    method: Option<String>,
     found: Option<String>,
     text: Option<String>,
 }
 
-fn parse_response<T>(response: Response<T>) -> Result<ApiResponse, ResponseError>
+#[derive(serde::Deserialize)]
+struct ApiResponseRspAttributes {
+    stat: String,
+}
+
+#[derive(serde::Deserialize)]
+struct ApiResponseErr {
+    #[serde(rename = "@attributes")]
+    attributes: ApiResponseErrAttributes,
+}
+
+#[derive(serde::Deserialize)]
+struct ApiResponseErrAttributes {
+    code: String,
+    msg: String,
+}
+
+fn parse_response<T>(response: Response<T>, method: Method) -> Result<ApiResponse, ResponseError>
 where
     T: AsRef<[u8]>,
 {
@@ -179,22 +206,54 @@ where
     }
 
     let body = response.body();
-    Ok(serde_json::from_slice(body.as_ref())?)
-}
+    let api_response: ApiResponse = serde_json::from_slice(body.as_ref())?;
 
-/// Returns true if `WebPurify` flagged a request to contain profanities, PII, etc
+    if let Some(ApiResponseErr {
+        attributes: ApiResponseErrAttributes { code, msg },
+    }) = api_response.rsp.err
+    {
+        let err = match code.as_str() {
+            "100" => ResponseError::InvalidApiKey(msg),
+            "101" => ResponseError::InactiveApiKey(msg),
+            "102" => ResponseError::MissingApiKey(msg),
+            "103" => ResponseError::ServiceUnavailable(msg),
+            _ => ResponseError::UnknownErr(code, msg),
+        };
+        return Err(err);
+    }
+
+    if !api_response.rsp.attributes.stat.eq("ok") {
+        return Err(ResponseError::NonOkStat(api_response.rsp.attributes.stat));
+    }
+
+    if !api_response
+        .rsp
+        .method
+        .as_ref()
+        .map(|s| s.as_str())
+        .eq(&Some(method.method_str()))
+    {
+        return Err(ResponseError::MisMatchedMethod(
+            api_response.rsp.method.unwrap_or_default(),
+            method.method_str().to_owned(),
+        ));
+    }
+
+    Ok(api_response)
+}
+/// Returns the number of profanities, PII etc `WebPurify` matched in the input string.
 ///
 /// # Arguments
 ///
 /// * `response` - a response object from the `WebPurify` `check` API call
 ///
-pub fn profanity_check_result<T>(response: Response<T>) -> Result<bool, ResponseError>
+pub fn profanity_check_result<T>(response: Response<T>) -> Result<u32, ResponseError>
 where
     T: AsRef<[u8]>,
 {
-    let response = parse_response(response)?;
+    let response = parse_response(response, Method::Check)?;
 
-    let check: u32 = response
+    let found: u32 = response
         .rsp
         .found
         .ok_or_else(|| ResponseError::MissingField("found".to_owned()))
@@ -204,7 +263,7 @@ where
                 .map_err(|_err| ResponseError::InvalidField("found".to_owned()))
         })?;
 
-    Ok(check > 0)
+    Ok(found)
 }
 
 /// Returns the sanitized string from a response object.
@@ -217,7 +276,7 @@ pub fn profanity_replace_result<T>(response: Response<T>) -> Result<String, Resp
 where
     T: AsRef<[u8]>,
 {
-    let response = parse_response(response)?;
+    let response = parse_response(response, Method::Replace("".to_owned()))?; // TODO It is inconvenient to pass in the replace char here
 
     match response.rsp.text {
         Some(text) => Ok(text),
@@ -265,9 +324,9 @@ mod test {
                 .body(body.as_bytes().to_vec())
         };
         let result = client::profanity_check_result(response_found(3)?)?;
-        assert!(result);
+        assert_eq!(result, 3);
         let result = client::profanity_check_result(response_found(0)?)?;
-        assert!(!result);
+        assert_eq!(result, 0);
         Ok(())
     }
 
@@ -313,6 +372,62 @@ mod test {
         let result = client::profanity_replace_result(response)?;
 
         assert_eq!(result, "foo".to_owned());
+        Ok(())
+    }
+
+    #[test]
+    fn response_errors() -> Result<(), Box<dyn Error>> {
+        let response = |code: u32| {
+            let body = format!("{{\"rsp\":{{\"@attributes\":{{\"stat\":\"fail\"}},\"err\":{{\"@attributes\":{{\"code\":\"{code}\",\"msg\":\"Msg\"}}}},\"text\":\"text\"}}}}");
+            Response::builder()
+                .status(StatusCode::OK)
+                .body(body.as_bytes().to_vec())
+        };
+
+        for (code, err) in [
+            (100, client::ResponseError::InvalidApiKey("Msg".to_owned())),
+            (101, client::ResponseError::InactiveApiKey("Msg".to_owned())),
+            (102, client::ResponseError::MissingApiKey("Msg".to_owned())),
+            (
+                103,
+                client::ResponseError::ServiceUnavailable("Msg".to_owned()),
+            ),
+            (
+                999,
+                client::ResponseError::UnknownErr("999".to_owned(), "Msg".to_owned()),
+            ),
+        ] {
+            let result = client::profanity_replace_result(response(code)?);
+            let result_err = result.err().expect("Expected error");
+            assert!(
+                std::mem::discriminant(&result_err) == std::mem::discriminant(&err),
+                "Expected error: {:?} but got: {:?}",
+                err,
+                result_err
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn mismatched_response_methods() -> Result<(), Box<dyn Error>> {
+        // Check treated as replace result
+        let body = format!("{{\"rsp\":{{\"@attributes\":{{\"stat\":\"ok\",\"rsp\":\"0.0072040557861328\"}},\"method\":\"webpurify.live.check\",\"format\":\"rest\",\"found\":\"1\",\"api_key\":\"123\"}}}}");
+        let response = Response::builder()
+            .status(StatusCode::OK)
+            .body(body.as_bytes().to_vec());
+        let result = client::profanity_replace_result(response?);
+        assert!(result.is_err());
+
+        // Replace treated as check result
+        let body = b"{\"rsp\":{\"@attributes\":{\"stat\":\"ok\",\"rsp\":\"0.018898963928223\"},\"method\":\"webpurify.live.replace\",\"format\":\"rest\",\"found\":\"3\",\"text\":\"foo\",\"api_key\":\"123\"}}";
+        let response = Response::builder()
+            .status(StatusCode::OK)
+            .body((*body).into_iter().collect::<Vec<_>>())?;
+        let result = client::profanity_check_result(response);
+        assert!(result.is_err());
+
         Ok(())
     }
 }

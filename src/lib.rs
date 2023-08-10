@@ -93,4 +93,18 @@ pub enum ResponseError {
     MissingField(String),
     #[error("Invalid field {0} in response")]
     InvalidField(String),
+    #[error("The API key passed was not valid: {0}")]
+    InvalidApiKey(String),
+    #[error("The API key passed is inactive or has been revoked: {0}")]
+    InactiveApiKey(String),
+    #[error("API Key was not included in request: {0}")]
+    MissingApiKey(String),
+    #[error("The requested service is temporarily unavailable: {0}")]
+    ServiceUnavailable(String),
+    #[error("Unknown error code returned: {0} {1}")]
+    UnknownErr(String, String),
+    #[error("Non ok stat returned: {0}")]
+    NonOkStat(String),
+    #[error("Got mis matched method in response, got: {0} expected: {1}")]
+    MisMatchedMethod(String, String),
 }
