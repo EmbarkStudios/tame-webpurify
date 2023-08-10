@@ -72,6 +72,8 @@ pub enum Method {
     Check,
     /// webpurify.live.check
     Replace(String),
+    /// webpurify.live.smartscreen
+    SmartScreen(String, bool, bool),
 }
 ```
 
