@@ -12,7 +12,7 @@ ignore = []
 [bans]
 multiple-versions = "deny"
 deny = [{ name = "openssl" }, { name = "openssl-sys" }]
-skip = []
+skip = [{ name = "socket2" }]
 skip-tree = []
 
 [licenses]
