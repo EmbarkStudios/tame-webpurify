@@ -85,7 +85,7 @@ pub fn query_string(api_key: &str, text: &str, method: Method) -> String {
         .append_pair("format", "json")
         .append_pair("api_key", api_key)
         .append_pair("text", text)
-        .append_pair("method", &method_str)
+        .append_pair("method", method_str)
         .append_pair("semail", "1")
         .append_pair("slink", "1")
         .append_pair("rsp", "1")
@@ -241,8 +241,7 @@ where
     if !api_response
         .rsp
         .method
-        .as_ref()
-        .map(|s| s.as_str())
+        .as_deref()
         .eq(&Some(method.method_str()))
     {
         return Err(ResponseError::MisMatchedMethod(
@@ -346,10 +345,8 @@ mod test {
 
     #[test]
     fn check_result_missing_found() -> Result<(), Box<dyn Error>> {
-        let body = format!("{{\"rsp\":{{\"@attributes\":{{\"stat\":\"ok\",\"rsp\":\"0.0072040557861328\"}},\"method\":\"webpurify.live.check\",\"format\":\"rest\",\"api_key\":\"123\"}}}}");
-        let response = Response::builder()
-            .status(StatusCode::OK)
-            .body(body.as_bytes().to_vec());
+        let body = b"{{\"rsp\":{{\"@attributes\":{{\"stat\":\"ok\",\"rsp\":\"0.0072040557861328\"}},\"method\":\"webpurify.live.check\",\"format\":\"rest\",\"api_key\":\"123\"}}}}";
+        let response = Response::builder().status(StatusCode::OK).body(body);
         let result = client::profanity_check_result(response?);
         assert!(result.is_err());
         Ok(())
@@ -368,9 +365,7 @@ mod test {
     #[test]
     fn replace_result() -> Result<(), Box<dyn Error>> {
         let body = b"{\"rsp\":{\"@attributes\":{\"stat\":\"ok\",\"rsp\":\"0.018898963928223\"},\"method\":\"webpurify.live.replace\",\"format\":\"rest\",\"found\":\"3\",\"text\":\"foo\",\"api_key\":\"123\"}}";
-        let response = Response::builder()
-            .status(StatusCode::OK)
-            .body((*body).into_iter().collect::<Vec<_>>())?;
+        let response = Response::builder().status(StatusCode::OK).body(body)?;
         let result = client::profanity_replace_result(response)?;
 
         assert_eq!(result, "foo".to_owned());
@@ -380,9 +375,7 @@ mod test {
     #[test]
     fn replace_result_missing_found() -> Result<(), Box<dyn Error>> {
         let body = b"{\"rsp\":{\"@attributes\":{\"stat\":\"ok\",\"rsp\":\"0.018898963928223\"},\"method\":\"webpurify.live.replace\",\"format\":\"rest\",\"text\":\"foo\",\"api_key\":\"123\"}}";
-        let response = Response::builder()
-            .status(StatusCode::OK)
-            .body((*body).into_iter().collect::<Vec<_>>())?;
+        let response = Response::builder().status(StatusCode::OK).body(body)?;
         let result = client::profanity_replace_result(response)?;
 
         assert_eq!(result, "foo".to_owned());
@@ -412,7 +405,7 @@ mod test {
             ),
         ] {
             let result = client::profanity_replace_result(response(code)?);
-            let result_err = result.err().expect("Expected error");
+            let result_err = result.expect_err("Expected error");
             assert!(
                 std::mem::discriminant(&result_err) == std::mem::discriminant(&err),
                 "Expected error: {:?} but got: {:?}",
@@ -427,18 +420,14 @@ mod test {
     #[test]
     fn mismatched_response_methods() -> Result<(), Box<dyn Error>> {
         // Check treated as replace result
-        let body = format!("{{\"rsp\":{{\"@attributes\":{{\"stat\":\"ok\",\"rsp\":\"0.0072040557861328\"}},\"method\":\"webpurify.live.check\",\"format\":\"rest\",\"found\":\"1\",\"api_key\":\"123\"}}}}");
-        let response = Response::builder()
-            .status(StatusCode::OK)
-            .body(body.as_bytes().to_vec());
+        let body = b"{{\"rsp\":{{\"@attributes\":{{\"stat\":\"ok\",\"rsp\":\"0.0072040557861328\"}},\"method\":\"webpurify.live.check\",\"format\":\"rest\",\"found\":\"1\",\"api_key\":\"123\"}}}}";
+        let response = Response::builder().status(StatusCode::OK).body(body);
         let result = client::profanity_replace_result(response?);
         assert!(result.is_err());
 
         // Replace treated as check result
         let body = b"{\"rsp\":{\"@attributes\":{\"stat\":\"ok\",\"rsp\":\"0.018898963928223\"},\"method\":\"webpurify.live.replace\",\"format\":\"rest\",\"found\":\"3\",\"text\":\"foo\",\"api_key\":\"123\"}}";
-        let response = Response::builder()
-            .status(StatusCode::OK)
-            .body((*body).into_iter().collect::<Vec<_>>())?;
+        let response = Response::builder().status(StatusCode::OK).body(body)?;
         let result = client::profanity_check_result(response);
         assert!(result.is_err());
 
