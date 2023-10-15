@@ -6,7 +6,7 @@ use tame_webpurify::client::Region;
 
 mod common;
 
-/// Run as `cargo run --example profanity -- --apikey <the-api-key>`
+/// Run as `cargo run --example check -- --apikey <the-api-key>`
 #[tokio::main]
 pub async fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = env::args().collect();

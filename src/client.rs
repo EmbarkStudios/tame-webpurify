@@ -1,42 +1,19 @@
+use crate::RequestError;
+use crate::ResponseError;
 use http::header::CONTENT_TYPE;
 use http::{Request, Response, Uri};
 use url::form_urlencoded;
 
-#[derive(thiserror::Error, Debug)]
-#[allow(clippy::upper_case_acronyms)]
-pub enum RequestError {
-    #[error("The provided Uri was invalid")]
-    InvalidUri,
+pub use crate::smart_screen::smart_screen_request;
+pub use crate::smart_screen::smart_screen_result;
+pub use crate::smart_screen::ApiSmartScreenResponse;
+pub use crate::smart_screen::ApiSmartScreenResponseSentiment;
 
-    #[error(transparent)]
-    HTTP(#[from] http::Error),
-}
-
-#[derive(thiserror::Error, Debug)]
-#[allow(clippy::upper_case_acronyms)]
-pub enum ResponseError {
-    #[error("The response status was invalid: {0}")]
-    HttpStatus(http::StatusCode),
-    #[error(transparent)]
-    Deserialize(#[from] serde_json::Error),
-    #[error("Missing field {0} in response")]
-    MissingField(String),
-    #[error("Invalid field {0} in response")]
-    InvalidField(String),
-    #[error("The API key passed was not valid: {0}")]
-    InvalidApiKey(String),
-    #[error("The API key passed is inactive or has been revoked: {0}")]
-    InactiveApiKey(String),
-    #[error("API Key was not included in request: {0}")]
-    MissingApiKey(String),
-    #[error("The requested service is temporarily unavailable: {0}")]
-    ServiceUnavailable(String),
-    #[error("Unknown error code returned: {0} {1}")]
-    UnknownErr(String, String),
-    #[error("Non ok stat returned: {0}")]
-    NonOkStat(String),
-    #[error("Got mis matched method in response, got: {0} expected: {1}")]
-    MisMatchedMethod(String, String),
+fn bool_to_str(value: bool) -> &'static str {
+    match value {
+        true => "true",
+        false => "false",
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -47,12 +24,14 @@ pub enum Region {
     Es,
 }
 
-#[derive(Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub enum Method {
     /// webpurify.live.check
     Check,
     /// webpurify.live.replace
     Replace(String),
+    /// webpurify.live.smartscreen
+    SmartScreen(String, bool, bool),
 }
 
 impl Method {
@@ -60,11 +39,12 @@ impl Method {
         match self {
             Method::Check => "webpurify.live.check",
             Method::Replace(_) => "webpurify.live.replace",
+            Method::SmartScreen(_, _, _) => "webpurify.live.smartscreen",
         }
     }
 }
 
-fn api_url_by_region(region: Region) -> String {
+pub(crate) fn api_url_by_region(region: Region) -> String {
     match region {
         Region::Us => "https://api1.webpurify.com/services/rest/",
         Region::Europe => "https://api1-eu.webpurify.com/services/rest/",
@@ -91,18 +71,26 @@ pub fn query_string(api_key: &str, text: &str, method: Method) -> String {
         .append_pair("rsp", "1")
         .append_pair("sphone", "1");
 
-    if let Method::Replace(replace_with) = method {
+    if let Method::Replace(replace_with) = method.clone() {
         qs.append_pair("replacesymbol", &replace_with);
+    }
+
+    if let Method::SmartScreen(replace_with, sentiment, topics) = method {
+        let sentiment_str = bool_to_str(sentiment);
+        let topics_str = bool_to_str(topics);
+        qs.append_pair("replacesymbol", &replace_with);
+        qs.append_pair("sentiment", sentiment_str);
+        qs.append_pair("topics", topics_str);
     }
 
     qs.finish()
 }
 
-pub(crate) fn into_uri<U: TryInto<Uri>>(uri: U) -> Result<Uri, RequestError> {
+pub fn into_uri<U: TryInto<Uri>>(uri: U) -> Result<Uri, RequestError> {
     uri.try_into().map_err(|_err| RequestError::InvalidUri)
 }
 
-fn request_builder(api_uri: String) -> Result<Request<Vec<u8>>, RequestError> {
+pub(crate) fn request_builder(api_uri: String) -> Result<Request<Vec<u8>>, RequestError> {
     let request_builder = Request::builder()
         .method("POST")
         .uri(into_uri(api_uri)?)
